@@ -11,50 +11,47 @@ let errorHandler = err => Js.log(err);
 [@bs.get] external innerText: Dom.element => string = "";
 [@bs.get] external innerHTML: Dom.element => string = "";
 
+/* Workaround for broken binding in dom-testing-libray.
+   should be fixed upstream soon */
+[@bs.module "dom-testing-library"] [@bs.scope "fireEvent"]
+external change: (Dom.element, Js.t({..})) => unit = "";
+
+let changeValue = (value, domElement) =>
+  change(domElement, {
+                       "target": {
+                         "value": value,
+                       },
+                     });
+
 describe("Note Functionality Test", () => {
   test("Notes component renders successfully", () =>
-    ReactTestingLibrary.render(<Notes initialNotes=["First note"] />)
+    RT.render(<Notes initialNotes=["First note"] />)
+    |> RT.container
     |> expect
     |> toMatchSnapshot
   );
-  testAsync("When user adds a note, a new row appears", finish => {
-    let tree =
-      ReactTestingLibrary.render(<Notes initialNotes=["First note"] />);
 
-    let container = tree |> ReactTestingLibrary.container;
+  testAsync(
+    "When user adds a note, the new note contains the user's input", finish => {
+    let tree = RT.render(<Notes initialNotes=["First note"] />);
 
-    let waitForNote = () => tree |> ReactTestingLibrary.getByTestId("note-1");
+    let container = tree |> RT.container;
 
-    let waitForInputChange = () =>
-      tree |> ReactTestingLibrary.getByValue("New Note");
+    let waitForNote = () => tree |> RT.getByTestId("note-1");
+
+    let waitForInputChange = () => tree |> RT.getByValue("New Note");
 
     let options =
-      DomTestingLibrary.WaitForElement.makeOptions(
-        ~container,
-        ~timeout=2000,
-        (),
-      );
+      DT.WaitForElement.makeOptions(~container, ~timeout=2000, ());
 
-    let event =
-      EventRe.makeWithOptions("change", {
-                                          "target": {
-                                            "value": "New Note",
-                                          },
-                                        });
+    tree
+    |> RT.getByPlaceholderText("Add new note here")
+    |> changeValue("New Note");
 
-    (tree |> ReactTestingLibrary.getByPlaceholderText("Add new note here"))
-    ->DomTestingLibrary.FireEvent.change(event);
-
-    DomTestingLibrary.waitForElement(
-      ~options,
-      ~callback=waitForInputChange,
-      (),
-    )
+    DT.waitForElement(~options, ~callback=waitForInputChange, ())
     ->FutureJs.fromPromise(errorHandler)
     ->Future.flatMapOk(_ => {
-        tree
-        |> ReactTestingLibrary.getByTestId("add-note-button")
-        |> DomTestingLibrary.FireEvent.click;
+        tree |> RT.getByTestId("add-note-button") |> DT.FireEvent.click;
 
         DT.waitForElement(~callback=waitForNote, ~options, ())
         ->FutureJs.fromPromise(errorHandler);

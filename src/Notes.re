@@ -43,22 +43,15 @@ let make = (~initialNotes, _children) => {
           (),
         )}>
         {<input
-           type_="txt"
+           type_="text"
            placeholder="Add new note here"
            value={self.state.newVal}
-           onChange={e => {
-             Js.log2("i", e);
-             self.send(UpdateText(ReactEvent.Form.target(e)##value));
-           }}
+           onChange={e =>
+             self.send(UpdateText(ReactEvent.Form.target(e)##value))
+           }
          />
          |> addTestId("input-annotation")}
-        {<div
-           onClick={_ => {
-             Js.log("Callback fired");
-             self.send(AddNote);
-           }}>
-           icon
-         </div>
+        {<div onClick={_ => self.send(AddNote)}> icon </div>
          |> addTestId("add-note-button")}
       </div>
       {self.state.notes
